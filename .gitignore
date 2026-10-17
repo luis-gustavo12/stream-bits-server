@@ -1,0 +1,102 @@
+# ---------------------------------------------------------------
+# Build and install trees (CMakePresets.json, CLion, Visual Studio)
+# ---------------------------------------------------------------
+/build/
+/install/
+/out/
+/cmake-build-*/
+
+# Per-developer CMake presets
+CMakeUserPresets.json
+
+# Final artifacts (CMAKE_*_OUTPUT_DIRECTORY -> bin/)
+/bin/
+
+# ---------------------------------------------------------------
+# CMake generated files (in case of an in-source configure)
+# ---------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+_deps/
+.ninja_deps
+.ninja_log
+build.ninja
+
+# ---------------------------------------------------------------
+# Compiler / linker outputs (MSVC, clang-cl, GCC/Clang)
+# ---------------------------------------------------------------
+*.obj
+*.o
+*.lo
+*.pch
+*.gch
+*.ipch
+*.idb
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+*.a
+*.so
+*.so.*
+*.dylib
+*.manifest
+
+# Profiling / sanitizers / dumps
+*.log
+*.tlog
+*.dmp
+*.stackdump
+*.profraw
+*.gcda
+*.gcno
+/core
+vgcore.*
+
+# ---------------------------------------------------------------
+# IDEs and editors
+# ---------------------------------------------------------------
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+
+# JetBrains (CLion / Rider) + Junie
+.idea/
+.junie/
+
+# Static analysis / language server caches
+.cache/
+.clangd/
+
+# Editor swap/backup files
+*~
+*.swp
+*.swo
+
+# ---------------------------------------------------------------
+# AI tooling (local-only state)
+# ---------------------------------------------------------------
+.claude/settings.local.json
+
+# ---------------------------------------------------------------
+# Project notes kept out of the repo for now
+# ---------------------------------------------------------------
+/AGENTS.md
+/fases-originais.txt
+
+# ---------------------------------------------------------------
+# OS
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

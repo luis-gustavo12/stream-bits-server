@@ -1,0 +1,77 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
+    },
+    { "name": "debug",   "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "release", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    {
+      "name": "windows",
+      "hidden": true,
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "architecture": { "value": "x64", "strategy": "external" },
+      "toolset": { "value": "host=x64", "strategy": "external" }
+    },
+    {
+      "name": "msvc",
+      "hidden": true,
+      "inherits": ["base", "windows"],
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "cl" }
+    },
+    {
+      "name": "clang-cl",
+      "hidden": true,
+      "inherits": ["base", "windows"],
+      "description": "The clang-cl bundled with Visual Studio; a standalone LLVM on PATH may be too old for the VS STL.",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "$env{VCINSTALLDIR}Tools/Llvm/x64/bin/clang-cl.exe" }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "g++" }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
+    },
+
+    { "name": "msvc-debug",       "displayName": "MSVC Debug",       "inherits": ["msvc", "debug"] },
+    { "name": "msvc-release",     "displayName": "MSVC Release",     "inherits": ["msvc", "release"] },
+    { "name": "clang-cl-debug",   "displayName": "clang-cl Debug",   "inherits": ["clang-cl", "debug"] },
+    { "name": "clang-cl-release", "displayName": "clang-cl Release", "inherits": ["clang-cl", "release"] },
+    { "name": "gcc-debug",        "displayName": "GCC Debug",        "inherits": ["gcc", "debug"] },
+    { "name": "gcc-release",      "displayName": "GCC Release",      "inherits": ["gcc", "release"] },
+    { "name": "clang-debug",      "displayName": "Clang Debug",      "inherits": ["clang", "debug"] },
+    { "name": "clang-release",    "displayName": "Clang Release",    "inherits": ["clang", "release"] }
+  ],
+  "buildPresets": [
+    { "name": "msvc-debug",       "configurePreset": "msvc-debug" },
+    { "name": "msvc-release",     "configurePreset": "msvc-release" },
+    { "name": "clang-cl-debug",   "configurePreset": "clang-cl-debug" },
+    { "name": "clang-cl-release", "configurePreset": "clang-cl-release" },
+    { "name": "gcc-debug",        "configurePreset": "gcc-debug" },
+    { "name": "gcc-release",      "configurePreset": "gcc-release" },
+    { "name": "clang-debug",      "configurePreset": "clang-debug" },
+    { "name": "clang-release",    "configurePreset": "clang-release" }
+  ],
+  "workflowPresets": [
+    { "name": "msvc-debug",       "steps": [ { "type": "configure", "name": "msvc-debug" },       { "type": "build", "name": "msvc-debug" } ] },
+    { "name": "msvc-release",     "steps": [ { "type": "configure", "name": "msvc-release" },     { "type": "build", "name": "msvc-release" } ] },
+    { "name": "clang-cl-debug",   "steps": [ { "type": "configure", "name": "clang-cl-debug" },   { "type": "build", "name": "clang-cl-debug" } ] },
+    { "name": "clang-cl-release", "steps": [ { "type": "configure", "name": "clang-cl-release" }, { "type": "build", "name": "clang-cl-release" } ] },
+    { "name": "gcc-debug",        "steps": [ { "type": "configure", "name": "gcc-debug" },        { "type": "build", "name": "gcc-debug" } ] },
+    { "name": "gcc-release",      "steps": [ { "type": "configure", "name": "gcc-release" },      { "type": "build", "name": "gcc-release" } ] },
+    { "name": "clang-debug",      "steps": [ { "type": "configure", "name": "clang-debug" },      { "type": "build", "name": "clang-debug" } ] },
+    { "name": "clang-release",    "steps": [ { "type": "configure", "name": "clang-release" },    { "type": "build", "name": "clang-release" } ] }
+  ]
+}
