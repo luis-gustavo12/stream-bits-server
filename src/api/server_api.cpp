@@ -1,8 +1,10 @@
 #include "api/server_api.hpp"
 
 
-std::expected<bool, ServerApiError> StreamBits::Api::OpenWebServer(uint16_t port){
+std::expected<StreamBits::Net::TcpHandler, ServerApiError> StreamBits::Api::OpenWebServer(uint16_t port){
 
-  return true;
+  auto tcp = Net::TcpHandler(port);
+
+  return tcp;
 
 }

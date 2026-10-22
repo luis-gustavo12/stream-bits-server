@@ -1,6 +1,6 @@
 
 
-#include "net/connection.hpp"
+#include "net/io_handler.hpp"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -14,18 +14,11 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
-constexpr char RESPONSE_MESSAGE[] =
-  "HTTP/1.1 200 OK\r\n"
-  "Content-Type: text/plain\r\n"
-  "Content-Length: 17\r\n"
-  "Connection: close\r\n"
-  "\r\n"
-  "Hello from Server";
+namespace StreamBits::Net {
 
-constexpr size_t RESPONSE_MESSAGE_SIZE = sizeof(RESPONSE_MESSAGE) - 1;
+
 
 namespace {
-
 
   enum Operation {
     Read,
@@ -33,9 +26,14 @@ namespace {
   };
 
   struct IoContext {
+
+    explicit IoContext(std::uint32_t size)
+      : buffer(std::make_unique<char[]>(size)), buffer_size(size) {}
+
     WSAOVERLAPPED overlapped;
     WSABUF wsa_buf;
-    char buffer [1024];
+    std::unique_ptr<char[]> buffer;
+    std::uint32_t buffer_size;
     Operation operation;
     DWORD bytes_total;
     DWORD bytes_sent;
@@ -51,7 +49,7 @@ namespace {
     delete io_context;
   }
 
-  void ProcessRequest(HANDLE iocp, uint16_t thread_number) {
+  void ProcessRequest(HANDLE iocp, std::uint16_t thread_number) {
 
     DWORD bytes_transferred;
     HandleContext* handle_context;
@@ -93,11 +91,11 @@ namespace {
 
       if (io_context->operation == Read) {
         std::cout << "Received |" << bytes_transferred << "|\n";
-        std::cout.write(io_context->buffer, bytes_transferred);
+        std::cout.write(io_context->buffer.get(), bytes_transferred);
         std::cout << "\n";
 
-        memcpy(io_context->buffer, RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
-        io_context->bytes_total = RESPONSE_MESSAGE_SIZE;
+        std::memcpy(io_context->buffer.get(), RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
+        io_context->bytes_total = static_cast<DWORD>(RESPONSE_MESSAGE_SIZE);
         io_context->bytes_sent = 0;
         io_context->operation = Write;
 
@@ -111,7 +109,8 @@ namespace {
       }
 
       ZeroMemory(&io_context->overlapped, sizeof(WSAOVERLAPPED));
-      io_context->wsa_buf.buf = io_context->buffer + io_context->bytes_sent;
+
+      io_context->wsa_buf.buf = io_context->buffer.get() + io_context->bytes_sent;
       io_context->wsa_buf.len = io_context->bytes_total - io_context->bytes_sent;
 
       DWORD flags = 0;
@@ -144,7 +143,7 @@ namespace {
 
 }
 
-void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
+void IoHandler::RunSocket() {
 
   SYSTEM_INFO sys_info;
   GetSystemInfo(&sys_info);
@@ -162,7 +161,7 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
     0, 0
   );
 
-  uint_fast16_t thread_count = sys_info.dwNumberOfProcessors * 2;
+  std::uint_fast16_t thread_count = sys_info.dwNumberOfProcessors * 2;
 
   std::vector<std::thread> workers;
   workers.reserve(thread_count);
@@ -185,11 +184,11 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
   sockaddr_in server_address = { 0 };
   server_address.sin_family = AF_INET;
   server_address.sin_addr.s_addr = INADDR_ANY;
-  server_address.sin_port = htons(port_number);
+  server_address.sin_port = htons(m_port_number);
 
   if (bind(listener_socket, (SOCKADDR*)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
     int error = WSAGetLastError();
-    std::cerr << "bind failed on port " << port_number << ": " << error << "\n";
+    std::cerr << "bind failed on port " << m_port_number << ": " << error << "\n";
     closesocket(listener_socket);
     CloseHandle(iocp);
     WSACleanup();
@@ -198,7 +197,7 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
 
   listen(listener_socket, SOMAXCONN);
 
-  for (uint16_t i = 0; i < thread_count; i++) {
+  for (std::uint16_t i = 0; i < thread_count; i++) {
     workers.emplace_back(ProcessRequest, iocp, i);
   }
 
@@ -208,17 +207,17 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
 
     if (client_socket == INVALID_SOCKET) {
       int error = WSAGetLastError();
-      std::cerr << "bind failed on port " << port_number << ": " << error << "\n";
+      std::cerr << "bind failed on port " << m_port_number << ": " << error << "\n";
       closesocket(listener_socket);
       CloseHandle(iocp);
       WSACleanup();
       break;
     }
 
+    IoContext* io_context = new IoContext(static_cast<std::uint32_t>(m_buffer_size));
     auto* context = new HandleContext;
 
     context->socket = client_socket;
-    IoContext* io_context = new IoContext;
 
     HANDLE handle = CreateIoCompletionPort(
       (HANDLE)client_socket,
@@ -233,8 +232,8 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
 
     ZeroMemory(&(io_context->overlapped), sizeof(WSAOVERLAPPED));
     io_context->operation = Read;
-    io_context->wsa_buf.buf = io_context->buffer;
-    io_context->wsa_buf.len = sizeof(io_context->buffer);
+    io_context->wsa_buf.buf = io_context->buffer.get();
+    io_context->wsa_buf.len = io_context->buffer_size;
 
     DWORD flags = 0;
     auto result = WSARecv(
@@ -245,6 +244,7 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
     );
 
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+      std::cout << "Error: " << WSAGetLastError() << "\n";
       CloseConnection(context, io_context);
     }
 
@@ -259,4 +259,6 @@ void StreamBits::Net::Connection::OpenSocket(uint16_t port_number = 8080) {
   WSACleanup();
 
   CloseHandle(iocp);
+}
+
 }

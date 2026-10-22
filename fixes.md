@@ -2,8 +2,8 @@
 
 Every change made to the project in this refactor, in three files:
 
-- `src/net/connection_win32.cpp`: rewritten (fixes and SRP split). Changes 1 to 24.
-- `include/net/connection.hpp`: change 25.
+- `src/net/io_handler_win32.cpp`: rewritten (fixes and SRP split). Changes 1 to 24.
+- `include/net/io_handler.hpp`: change 25.
 - `CMakeLists.txt`: change 26.
 
 ---
@@ -1410,7 +1410,7 @@ I did that because:
 
 ---
 
-## 25. `include/net/connection.hpp`: default argument moved to the declaration
+## 25. `include/net/io_handler.hpp`: default argument moved to the declaration
 
 Old code
 
@@ -1454,7 +1454,7 @@ Old code
 ```cmake
 if (WIN32)
     target_sources(stream-bits PRIVATE
-            src/net/connection_win32.cpp
+            src/net/io_handler_win32.cpp
     )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 ```
@@ -1464,7 +1464,7 @@ New code
 ```cmake
 if (WIN32)
     target_sources(stream-bits PRIVATE
-            src/net/connection_win32.cpp
+            src/net/io_handler_win32.cpp
     )
     target_link_libraries(stream-bits PRIVATE ws2_32)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -29,15 +29,17 @@ add_library(stream-bits
         include/api/server_api.hpp
         src/api/server_api.cpp
         src/api/server_api.cpp
-        include/core/stream_bits_tcp.hpp
-        src/core/stream_bits_tcp.cpp
+        include/net/stream_bits_tcp.hpp
+        src/net/stream_bits_tcp.cpp
+        include/net/http.hpp
+        src/net/http.cpp
 )
 add_library(stream-bits::stream-bits ALIAS stream-bits)
 
 # Platform-specific sources
 if (WIN32)
     target_sources(stream-bits PRIVATE
-            src/net/connection_win32.cpp
+            src/net/io_handler_win32.cpp
     )
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(stream-bits PRIVATE
@@ -53,8 +55,8 @@ target_include_directories(stream-bits PUBLIC
 target_compile_features(stream-bits PUBLIC cxx_std_23)
 
 set_target_properties(stream-bits PROPERTIES
-        CXX_EXTENSIONS             OFF   # -std=c++23, not gnu++23
-        WINDOWS_EXPORT_ALL_SYMBOLS ON    # shared build on Windows without __declspec(dllexport) yet
+        CXX_EXTENSIONS             OFF
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 target_compile_options(stream-bits PRIVATE
