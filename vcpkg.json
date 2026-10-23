@@ -1,0 +1,8 @@
+{
+  "name": "stream-bits",
+  "version": "0.1.0",
+  "builtin-baseline": "9db9ee4daf6359e5107d5bdc5dbbf702d936cf5a",
+  "dependencies": [
+    "gtest"
+  ]
+}

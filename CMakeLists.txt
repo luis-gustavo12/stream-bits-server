@@ -11,6 +11,7 @@ project(stream-bits
 # so that add_subdirectory()/FetchContent consumers keep control of their own build)
 # ---------------------------------------------------------------------------
 option(STREAM_BITS_BUILD_EXAMPLES "Build the programs in examples/" ${PROJECT_IS_TOP_LEVEL})
+option(STREAM_BITS_BUILD_TESTS    "Build the GoogleTest suite in tests/" ${PROJECT_IS_TOP_LEVEL})
 
 if (PROJECT_IS_TOP_LEVEL)
     option(BUILD_SHARED_LIBS "Build stream-bits as a shared library" ON)
@@ -33,6 +34,7 @@ add_library(stream-bits
         src/net/stream_bits_tcp.cpp
         include/net/http.hpp
         src/net/http.cpp
+        include/net/connection.hpp
 )
 add_library(stream-bits::stream-bits ALIAS stream-bits)
 
@@ -72,6 +74,14 @@ target_compile_options(stream-bits PRIVATE
 # ---------------------------------------------------------------------------
 if (STREAM_BITS_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif ()
+
+# ---------------------------------------------------------------------------
+# Tests (GoogleTest comes from vcpkg, see vcpkg.json)
+# ---------------------------------------------------------------------------
+if (STREAM_BITS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif ()
 
 # ---------------------------------------------------------------------------
