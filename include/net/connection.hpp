@@ -13,7 +13,7 @@ namespace StreamBits::Net {
 
   private:
     Http::Parser m_parser;
-    IoHandler m_io_handler;
+    IoFacadeIoHandler m_io_handler;
 
 
   };
