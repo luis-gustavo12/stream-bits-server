@@ -35,6 +35,7 @@ add_library(stream-bits
         include/net/http.hpp
         src/net/http.cpp
         include/net/connection.hpp
+        include/net/socket.hpp
 )
 add_library(stream-bits::stream-bits ALIAS stream-bits)
 
@@ -43,6 +44,7 @@ if (WIN32)
     target_sources(stream-bits PRIVATE
             src/net/io_handler_win32.cpp
     )
+    target_compile_definitions(stream-bits PRIVATE NOMINMAX)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(stream-bits PRIVATE
             src/net/connection_linux.cpp
