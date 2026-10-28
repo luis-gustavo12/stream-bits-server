@@ -270,6 +270,21 @@ std::expected<void, Socket::Error> IoFacadeIoHandler::ConfigureSocket() {
     return std::unexpected(Socket::Error::InvalidSocketError);
   }
 
+  BOOL exclusive = TRUE;
+  if (setsockopt(m_listener_socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+                 reinterpret_cast<const char*>(&exclusive), sizeof(exclusive)) == SOCKET_ERROR) {
+    closesocket(m_listener_socket);
+    CloseHandle(m_iocp);
+    WSACleanup();
+    return std::unexpected(Socket::Error::SocketBindingError);
+                 }
+
+  if (m_listener_socket == INVALID_SOCKET) {
+    CloseHandle(m_iocp);
+    WSACleanup();
+    return std::unexpected(Socket::Error::InvalidSocketError);
+  }
+
   sockaddr_in server = { 0 };
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
