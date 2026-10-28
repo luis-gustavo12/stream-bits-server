@@ -48,99 +48,118 @@ namespace {
     delete io_context;
   }
 
-  void ProcessRequest(HANDLE iocp, std::uint16_t thread_number) {
+}
 
-    DWORD bytes_transferred;
-    HandleContext* handle_context;
-    IoContext* io_context;
+void IoFacadeIoHandler::ProcessRequest() {
 
-    while (true) {
+  auto thread_id = std::this_thread::get_id();
 
-      BOOL success = GetQueuedCompletionStatus(
-        iocp,
-        &bytes_transferred,
-        (PULONG_PTR)&handle_context,
-        (LPOVERLAPPED*)&io_context,
-        INFINITE
-      );
+  while (true) {
 
-      if (io_context == nullptr)
+    HandleContext* handle_context = nullptr;
+    IoContext* io_context = nullptr;
+
+    DWORD bytes_transferred = 0;
+    ULONG_PTR completion_key = 0;
+    LPOVERLAPPED overlapped = nullptr;
+
+    BOOL success = GetQueuedCompletionStatus(
+      m_iocp,
+      &bytes_transferred,
+      &completion_key,
+      &overlapped,
+      INFINITE
+    );
+
+    const DWORD error = success ? ERROR_SUCCESS : GetLastError();
+
+    if (overlapped == nullptr) {
+      if (success) {
         break;
+      }
 
-      if (!success || (bytes_transferred == 0 && io_context->operation == Read)) {
-        DWORD error = success ? 0 : GetLastError();
+      std::cerr << "Thread number " << thread_id
+                << ": GetQueuedCompletionStatus failed without an I/O packet, error "
+                << error << "\n";
+      break;
+    }
 
-        std::cout << "Thread number " << thread_number << " closing connection: ";
-        if (!success)
-          std::cout << (io_context->operation == Read ? "read" : "write")
-                    << " failed, error " << error << "\n";
-        else
-          std::cout << "client closed the connection (0 bytes read)\n";
+    handle_context = reinterpret_cast<HandleContext*>(completion_key);
+    io_context = CONTAINING_RECORD(overlapped, IoContext, overlapped);
 
+    if (!success || (bytes_transferred == 0 && io_context->operation == Read)) {
+      DWORD error = success ? 0 : GetLastError();
+
+      std::cout << "Thread number " << thread_id << " closing connection: ";
+      if (!success)
+        std::cout << (io_context->operation == Read ? "read" : "write")
+                  << " failed, error " << error << "\n";
+      else
+        std::cout << "client closed the connection (0 bytes read)\n";
+
+      CloseConnection(handle_context, io_context);
+      continue;
+    }
+
+    std::cout << "Thread number " << thread_id << " being awaken";
+
+    if (io_context->operation == Read)
+      std::cout << " to read something\n";
+    else
+      std::cout << " to write something\n";
+
+    if (io_context->operation == Read) {
+      std::cout << "Received |" << bytes_transferred << "|\n";
+      std::cout.write(io_context->buffer.get(), bytes_transferred);
+      std::cout << "\n";
+
+      std::memcpy(io_context->buffer.get(), RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
+      io_context->bytes_total = static_cast<DWORD>(RESPONSE_MESSAGE_SIZE);
+      io_context->bytes_sent = 0;
+      io_context->operation = Write;
+
+    } else {
+      std::cout << "Writing operation!\n";
+      io_context->bytes_sent += bytes_transferred;
+      if (io_context->bytes_sent == io_context->bytes_total) {
         CloseConnection(handle_context, io_context);
         continue;
       }
+    }
 
-      std::cout << "Thread number " << thread_number << " being awaken";
+    ZeroMemory(&io_context->overlapped, sizeof(WSAOVERLAPPED));
 
-      if (io_context->operation == Read)
-        std::cout << " to read something\n";
-      else
-        std::cout << " to write something\n";
+    io_context->wsa_buf.buf = io_context->buffer.get() + io_context->bytes_sent;
+    io_context->wsa_buf.len = io_context->bytes_total - io_context->bytes_sent;
 
-      if (io_context->operation == Read) {
-        std::cout << "Received |" << bytes_transferred << "|\n";
-        std::cout.write(io_context->buffer.get(), bytes_transferred);
-        std::cout << "\n";
+    // DWORD flags = 0;
+    // int send_result = WSARecv(
+    //   handle_context->socket,
+    //   &(io_context->wsa_buf), 1,
+    //   nullptr, &flags,
+    //   &(io_context->overlapped), nullptr
+    // );
 
-        std::memcpy(io_context->buffer.get(), RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
-        io_context->bytes_total = static_cast<DWORD>(RESPONSE_MESSAGE_SIZE);
-        io_context->bytes_sent = 0;
-        io_context->operation = Write;
+    int send_result = WSASend(
+      handle_context->socket,
+      &(io_context->wsa_buf), 1,
+      nullptr, 0,
+      &(io_context->overlapped), nullptr
+    );
 
-      } else {
-        std::cout << "Writing operation!\n";
-        io_context->bytes_sent += bytes_transferred;
-        if (io_context->bytes_sent == io_context->bytes_total) {
-          CloseConnection(handle_context, io_context);
-          continue;
-        }
+    if (send_result == SOCKET_ERROR) {
+      int error = WSAGetLastError();
+      if (error != WSA_IO_PENDING) {
+        std::cout << "Thread number " << thread_id
+                  << " closing connection: WSASend failed immediately, error " << error << "\n";
+        CloseConnection(handle_context, io_context);
       }
-
-      ZeroMemory(&io_context->overlapped, sizeof(WSAOVERLAPPED));
-
-      io_context->wsa_buf.buf = io_context->buffer.get() + io_context->bytes_sent;
-      io_context->wsa_buf.len = io_context->bytes_total - io_context->bytes_sent;
-
-      DWORD flags = 0;
-      // int send_result = WSARecv(
-      //   handle_context->socket,
-      //   &(io_context->wsa_buf), 1,
-      //   nullptr, &flags,
-      //   &(io_context->overlapped), nullptr
-      // );
-
-      int send_result = WSASend(
-        handle_context->socket,
-        &(io_context->wsa_buf), 1,
-        nullptr, 0,
-        &(io_context->overlapped), nullptr
-      );
-
-      if (send_result == SOCKET_ERROR) {
-        int error = WSAGetLastError();
-        if (error != WSA_IO_PENDING) {
-          std::cout << "Thread number " << thread_number
-                    << " closing connection: WSASend failed immediately, error " << error << "\n";
-          CloseConnection(handle_context, io_context);
-        }
-      }
-
     }
 
   }
 
 }
+
 
 void IoFacadeIoHandler::RunSocket() {
 
@@ -197,7 +216,7 @@ void IoFacadeIoHandler::RunSocket() {
   listen(listener_socket, SOMAXCONN);
 
   for (std::uint16_t i = 0; i < thread_count; i++) {
-    workers.emplace_back(ProcessRequest, iocp, i);
+    workers.emplace_back(&IoFacadeIoHandler::ProcessRequest, this);
   }
 
   while (true) {
