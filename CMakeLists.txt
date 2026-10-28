@@ -36,6 +36,8 @@ add_library(stream-bits
         src/net/http.cpp
         include/net/connection.hpp
         include/net/socket.hpp
+        src/net/connection.cpp
+        include/net/parser_io_mediator.hpp
 )
 add_library(stream-bits::stream-bits ALIAS stream-bits)
 
