@@ -8,6 +8,17 @@
 #include "http.hpp"
 #include "socket.hpp"
 
+#ifdef _WIN32
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#pragma comment(lib, "Ws2_32.lib")
+
+#endif
+
+
 
 namespace StreamBits::Net {
 
@@ -61,6 +72,19 @@ namespace StreamBits::Net {
     MessageCallback m_on_received_message; // callback for when the message arrives
     MessageCallback m_on_response_message; // callback for responding the request
 
+#ifdef _WIN32
+
+    SOCKET m_listener_socket = INVALID_SOCKET;
+    HANDLE m_iocp = nullptr;
+    WSADATA m_wsa_data = { 0 };
+    BOOL m_wsa_started = false;
+
+#endif
+
+
+
+
+    void ProcessRequest();
 
   };
 
