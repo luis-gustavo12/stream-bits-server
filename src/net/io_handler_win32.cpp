@@ -142,7 +142,7 @@ namespace {
 
 }
 
-void IoHandler::RunSocket() {
+void IoFacadeIoHandler::RunSocket() {
 
   SYSTEM_INFO sys_info;
   GetSystemInfo(&sys_info);
