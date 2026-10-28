@@ -9,9 +9,6 @@ namespace StreamBits::Net {
    */
   class Connection {
 
-
-
-  private:
     Http::Parser m_parser;
     IoFacadeIoHandler m_io_handler;
 
