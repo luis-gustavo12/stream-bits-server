@@ -161,6 +161,30 @@ void IoFacadeIoHandler::ProcessRequest() {
 }
 
 
+std::expected<IoFacadeIoHandler, Socket::Error> IoFacadeIoHandler::Create(std::uint16_t port_number,
+  std::size_t default_buffer_size) {
+
+  if (default_buffer_size == 0 || default_buffer_size > std::numeric_limits<std::uint32_t>::max()) {
+    return std::unexpected(Socket::Error::SocketInitializationError);
+  }
+
+  IoFacadeIoHandler io_handler(port_number, default_buffer_size);
+
+  auto init_result = io_handler.OpenSocket();
+
+  if (!init_result) {
+    return std::unexpected(Socket::Error::SocketInitializationError);
+  }
+
+  auto configure_result = io_handler.ConfigureSocket();
+
+  if (!configure_result)
+    return std::unexpected(Socket::Error::SocketBindingError);
+
+  return io_handler;
+
+}
+
 IoFacadeIoHandler::~IoFacadeIoHandler() {
   Release();
 }
@@ -212,30 +236,27 @@ void IoFacadeIoHandler::Release() noexcept {
   }
 }
 
-void IoFacadeIoHandler::RunSocket() {
+std::expected<void, Socket::Error> IoFacadeIoHandler::OpenSocket() {
 
-  SYSTEM_INFO sys_info;
-  GetSystemInfo(&sys_info);
-
-  std::cout << "Opening socket\n";
-
-  WSADATA wsa_data;
-  if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-    return;
+  auto startup_result = WSAStartup(MAKEWORD(2, 2), &m_wsa_data);
+  if (startup_result != 0) {
+    Socket::error_message = std::system_category().message(startup_result);
+    return std::unexpected(Socket::Error::SocketInitializationError);
   }
 
-  HANDLE iocp = CreateIoCompletionPort(
-    INVALID_HANDLE_VALUE,
-    nullptr,
-    0, 0
-  );
+  m_wsa_started = true;
+  return {};
+}
 
-  std::uint_fast16_t thread_count = sys_info.dwNumberOfProcessors * 2;
+std::expected<void, Socket::Error> IoFacadeIoHandler::ConfigureSocket() {
 
-  std::vector<std::thread> workers;
-  workers.reserve(thread_count);
+  m_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+  if (m_iocp == nullptr) {
+    WSACleanup();
+    return std::unexpected(Socket::Error::SocketInitializationError);
+  }
 
-  SOCKET listener_socket = WSASocketW(
+  m_listener_socket = WSASocketW(
     AF_INET,
     SOCK_STREAM,
     IPPROTO_TCP,
@@ -244,27 +265,41 @@ void IoFacadeIoHandler::RunSocket() {
     WSA_FLAG_OVERLAPPED
   );
 
-  if (listener_socket == INVALID_SOCKET) {
-    CloseHandle(iocp);
-    WSACleanup();
-    return;
+  if (m_listener_socket == INVALID_SOCKET) {
+    Release();
+    return std::unexpected(Socket::Error::InvalidSocketError);
   }
 
-  sockaddr_in server_address = { 0 };
-  server_address.sin_family = AF_INET;
-  server_address.sin_addr.s_addr = INADDR_ANY;
-  server_address.sin_port = htons(m_port_number);
+  sockaddr_in server = { 0 };
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = INADDR_ANY;
+  server.sin_port = htons(m_port_number);
 
-  if (bind(listener_socket, (SOCKADDR*)&server_address, sizeof(server_address)) == SOCKET_ERROR) {
-    int error = WSAGetLastError();
-    std::cerr << "bind failed on port " << m_port_number << ": " << error << "\n";
-    closesocket(listener_socket);
-    CloseHandle(iocp);
+  if ( bind(m_listener_socket, reinterpret_cast<SOCKADDR*>(&server), sizeof(server)) == SOCKET_ERROR ) {
+    closesocket(m_listener_socket);
+    CloseHandle(m_iocp);
     WSACleanup();
-    return;
+    return std::unexpected(Socket::Error::SocketBindingError);
   }
 
-  listen(listener_socket, SOMAXCONN);
+  if (listen(m_listener_socket, SOMAXCONN) == SOCKET_ERROR) {
+    closesocket(m_listener_socket);
+    CloseHandle(m_iocp);
+    WSACleanup();
+    return std::unexpected(Socket::Error::SocketBindingError);
+  }
+
+  return {};
+}
+
+void IoFacadeIoHandler::RunSocket() {
+
+  SYSTEM_INFO sys_info;
+  GetSystemInfo(&sys_info);
+
+  auto thread_count = sys_info.dwNumberOfProcessors * 2;
+  std::vector<std::thread> workers;
+  workers.reserve(thread_count);
 
   for (std::uint16_t i = 0; i < thread_count; i++) {
     workers.emplace_back(&IoFacadeIoHandler::ProcessRequest, this);
@@ -331,14 +366,12 @@ void IoFacadeIoHandler::RunSocket() {
   } // while (true)
 
   for (size_t i = 0; i < workers.size(); ++i)
-    PostQueuedCompletionStatus(iocp, 0, 0, nullptr);
+    PostQueuedCompletionStatus(m_iocp, 0, 0, nullptr);
 
   for (auto& worker : workers)
     worker.join();
 
-  WSACleanup();
-
-  CloseHandle(iocp);
+  Release();
 }
 
 }
