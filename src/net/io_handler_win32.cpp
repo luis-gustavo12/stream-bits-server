@@ -123,6 +123,8 @@ void IoFacadeIoHandler::ProcessRequest() {
         continue;
       }
 
+
+
       std::memcpy(io_context->buffer.get(), RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
       io_context->bytes_total = static_cast<DWORD>(RESPONSE_MESSAGE_SIZE);
       io_context->bytes_sent = 0;
