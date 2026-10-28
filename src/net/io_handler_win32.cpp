@@ -28,13 +28,13 @@ namespace {
     explicit IoContext(std::uint32_t size)
       : buffer(std::make_unique<char[]>(size)), buffer_size(size) {}
 
-    WSAOVERLAPPED overlapped;
-    WSABUF wsa_buf;
+    WSAOVERLAPPED overlapped { 0 };
+    WSABUF wsa_buf { 0 };
     std::unique_ptr<char[]> buffer;
     std::uint32_t buffer_size;
     Operation operation;
-    DWORD bytes_total;
-    DWORD bytes_sent;
+    DWORD bytes_total{};
+    DWORD bytes_sent{};
   };
 
   struct HandleContext {
