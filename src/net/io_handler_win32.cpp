@@ -206,11 +206,22 @@ void IoHandler::RunSocket() {
     SOCKET client_socket = accept(listener_socket, nullptr, nullptr);
 
     if (client_socket == INVALID_SOCKET) {
-      int error = WSAGetLastError();
-      std::cerr << "bind failed on port " << m_port_number << ": " << error << "\n";
-      closesocket(listener_socket);
-      CloseHandle(iocp);
-      WSACleanup();
+      auto error_code = WSAGetLastError();
+      std::string error_msg = std::system_category().message(error_code);
+
+      std::cerr << "Failed to accept incoming connection on port " << m_port_number
+                << " (Error " << error_code << "): " << error_msg << "\n";
+
+
+      if (error_code == WSAECONNRESET)
+        continue;
+
+      if (error_code == WSAEMFILE || error_code == WSAENOBUFS) {
+        continue;
+      }
+
+      closesocket(m_listener_socket);
+      m_listener_socket = INVALID_SOCKET;
       break;
     }
 
