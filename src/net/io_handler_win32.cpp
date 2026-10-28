@@ -389,4 +389,11 @@ void IoFacadeIoHandler::RunSocket() {
   Release();
 }
 
+void IoFacadeIoHandler::SetOnReceive(MessageCallback&& msg) {
+  m_on_received_message = std::move(msg);
+}
+
+void IoFacadeIoHandler::SetOnResponse(MessageCallback&& msg) {
+  m_on_response_message = std::move(msg);
+}
 }
