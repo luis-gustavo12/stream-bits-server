@@ -6,10 +6,8 @@
 #include "net/stream_bits_tcp.hpp"
 
 
-struct ServerApiError{
-
-
-
+enum class ServerApiError{
+  GeneralError,
 
 };
 
