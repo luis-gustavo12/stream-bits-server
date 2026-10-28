@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <expected>
@@ -10,6 +11,7 @@
 
 namespace StreamBits::Net {
 
+  using MessageCallback = std::function<void (char* msg, std::size_t msg_size)>;
 
   constexpr char RESPONSE_MESSAGE[] =
     "HTTP/1.1 200 OK\r\n"
@@ -29,6 +31,8 @@ namespace StreamBits::Net {
 
     static std::expected<IoFacadeIoHandler, Socket::Error> Create(std::uint16_t port_number = 8080, std::size_t default_buffer_size = Http::DEFAULT_BUFFER_SIZE);
     void RunSocket();
+    void SetOnReceive(MessageCallback&& msg);
+    void SetOnResponse(MessageCallback&& msg);
     ~IoFacadeIoHandler();
     IoFacadeIoHandler(const IoFacadeIoHandler&) = delete;
     IoFacadeIoHandler& operator=(const IoFacadeIoHandler&) = delete;
@@ -54,6 +58,9 @@ namespace StreamBits::Net {
     std::uint16_t m_port_number;
     std::size_t m_buffer_size;
     std::unique_ptr<char[]> m_buffer;
+    MessageCallback m_on_received_message; // callback for when the message arrives
+    MessageCallback m_on_response_message; // callback for responding the request
+
 
   };
 
