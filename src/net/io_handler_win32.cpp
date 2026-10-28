@@ -227,7 +227,7 @@ void IoHandler::RunSocket() {
 
     if (!handle) {
       CloseConnection(context, io_context);
-      continue;;
+      continue;
     }
 
     ZeroMemory(&(io_context->overlapped), sizeof(WSAOVERLAPPED));
