@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -257,7 +258,7 @@ void IoHandler::RunSocket() {
       CloseConnection(context, io_context);
     }
 
-  }
+  } // while (true)
 
   for (size_t i = 0; i < workers.size(); ++i)
     PostQueuedCompletionStatus(iocp, 0, 0, nullptr);
