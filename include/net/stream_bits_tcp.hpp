@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
-
+#include <optional>
+#include "connection.hpp"
 #include "io_handler.hpp"
 
 
