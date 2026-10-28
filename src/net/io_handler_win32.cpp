@@ -383,9 +383,14 @@ void IoFacadeIoHandler::RunSocket() {
       &(io_context->overlapped), nullptr
     );
 
-    if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-      std::cout << "Error: " << WSAGetLastError() << "\n";
-      CloseConnection(context, io_context);
+    if (result == SOCKET_ERROR) {
+      const int error = WSAGetLastError();
+
+      if (error != WSA_IO_PENDING) {
+        std::cout << "Error: " << error << "\n";
+        CloseConnection(context, io_context);
+        continue;
+      }
     }
 
   } // while (true)
