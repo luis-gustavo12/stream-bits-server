@@ -214,7 +214,7 @@ void IoHandler::RunSocket() {
       break;
     }
 
-    IoContext* io_context = new IoContext(static_cast<std::uint32_t>(m_buffer_size));
+    auto* io_context = new IoContext(static_cast<std::uint32_t>(m_buffer_size));
     auto* context = new HandleContext;
 
     context->socket = client_socket;
