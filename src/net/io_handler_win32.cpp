@@ -16,8 +16,6 @@
 
 namespace StreamBits::Net {
 
-
-
 namespace {
 
   enum Operation {
