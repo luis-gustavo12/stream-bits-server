@@ -203,7 +203,7 @@ void IoHandler::RunSocket() {
 
   while (true) {
 
-    SOCKET client_socket = accept(listener_socket, nullptr, nullptr);
+    SOCKET client_socket = accept(m_listener_socket, nullptr, nullptr);
 
     if (client_socket == INVALID_SOCKET) {
       auto error_code = WSAGetLastError();
