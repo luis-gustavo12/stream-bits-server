@@ -221,7 +221,7 @@ void IoHandler::RunSocket() {
 
     HANDLE handle = CreateIoCompletionPort(
       (HANDLE)client_socket,
-      iocp,
+      m_iocp,
       (ULONG_PTR)context, 0
     );
 
