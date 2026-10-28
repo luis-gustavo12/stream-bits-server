@@ -161,6 +161,57 @@ void IoFacadeIoHandler::ProcessRequest() {
 }
 
 
+IoFacadeIoHandler::~IoFacadeIoHandler() {
+  Release();
+}
+
+IoFacadeIoHandler::IoFacadeIoHandler(IoFacadeIoHandler&& io) noexcept
+  : m_port_number(io.m_port_number),
+    m_buffer_size(std::exchange(io.m_buffer_size, 0)),
+    m_buffer(std::move(io.m_buffer)),
+    m_on_received_message(std::move(io.m_on_received_message)),
+    m_on_response_message(std::move(io.m_on_response_message)),
+    m_listener_socket(std::exchange(io.m_listener_socket, INVALID_SOCKET)),
+    m_iocp(std::exchange(io.m_iocp, nullptr)),
+    m_wsa_data(io.m_wsa_data),
+    m_wsa_started(std::exchange(io.m_wsa_started, FALSE)) {}
+
+
+IoFacadeIoHandler& IoFacadeIoHandler::operator=(IoFacadeIoHandler&& io) noexcept {
+  if (this != &io) {
+    Release();
+
+    m_port_number         = io.m_port_number;
+    m_buffer_size         = std::exchange(io.m_buffer_size, 0);
+    m_buffer              = std::move(io.m_buffer);
+    m_on_received_message = std::move(io.m_on_received_message);
+    m_on_response_message = std::move(io.m_on_response_message);
+    m_listener_socket     = std::exchange(io.m_listener_socket, INVALID_SOCKET);
+    m_iocp                = std::exchange(io.m_iocp, nullptr);
+    m_wsa_data            = io.m_wsa_data;
+    m_wsa_started         = std::exchange(io.m_wsa_started, FALSE);
+  }
+  return *this;
+}
+
+void IoFacadeIoHandler::Release() noexcept {
+
+  if (m_listener_socket != INVALID_SOCKET) {
+    closesocket(m_listener_socket);
+    m_listener_socket = INVALID_SOCKET;
+  }
+
+  if (m_iocp != nullptr) {
+    CloseHandle(m_iocp);
+    m_iocp = nullptr;
+  }
+
+  if (m_wsa_started) {
+    WSACleanup();
+    m_wsa_started = FALSE;
+  }
+}
+
 void IoFacadeIoHandler::RunSocket() {
 
   SYSTEM_INFO sys_info;
