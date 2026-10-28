@@ -13,9 +13,6 @@ namespace StreamBits::Net {
 
     static std::optional<TcpHandler> Create(uint16_t port_number) noexcept;
 
-    // explicit TcpHandler(uint16_t port_number) : m_handler(IoFacadeIoHandler::Create(port_number).value()) {
-    // }
-
     void Run();
 
     TcpHandler(Connection&) = delete;
