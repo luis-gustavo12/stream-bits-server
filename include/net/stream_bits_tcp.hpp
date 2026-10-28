@@ -9,15 +9,14 @@ namespace StreamBits::Net {
   class TcpHandler {
 
   public:
-    explicit TcpHandler(uint16_t port_number) : m_handler(port_number) {
-
+    explicit TcpHandler(uint16_t port_number) : m_handler(IoFacadeIoHandler::Create(port_number).value()) {
     }
 
     void Run();
 
   private:
 
-    IoHandler m_handler;
+    IoFacadeIoHandler m_handler;
 
 
   };
