@@ -113,6 +113,16 @@ void IoFacadeIoHandler::ProcessRequest() {
       std::cout.write(io_context->buffer.get(), bytes_transferred);
       std::cout << "\n";
 
+      auto response_size = static_cast<std::size_t>(RESPONSE_MESSAGE_SIZE);
+
+      if (response_size > io_context->buffer_size) {
+        std::cerr << "Thread number " << thread_id
+                  << " closing connection: response does not fit in the I/O buffer\n";
+
+        CloseConnection(handle_context, io_context);
+        continue;
+      }
+
       std::memcpy(io_context->buffer.get(), RESPONSE_MESSAGE, RESPONSE_MESSAGE_SIZE);
       io_context->bytes_total = static_cast<DWORD>(RESPONSE_MESSAGE_SIZE);
       io_context->bytes_sent = 0;
