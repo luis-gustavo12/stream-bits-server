@@ -2,8 +2,10 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <expected>
 
 #include "http.hpp"
+#include "socket.hpp"
 
 
 namespace StreamBits::Net {
@@ -21,11 +23,22 @@ namespace StreamBits::Net {
 
   constexpr uint16_t DEFAULT_TCP_PORT = 8080;
 
-  class IoHandler {
+  class IoFacadeIoHandler {
 
   public:
 
-    explicit IoHandler(std::uint16_t port_number = DEFAULT_TCP_PORT,
+    static std::expected<IoFacadeIoHandler, Socket::Error> Create(std::uint16_t port_number = 8080, std::size_t default_buffer_size = Http::DEFAULT_BUFFER_SIZE);
+    void RunSocket();
+    ~IoFacadeIoHandler();
+    IoFacadeIoHandler(const IoFacadeIoHandler&) = delete;
+    IoFacadeIoHandler& operator=(const IoFacadeIoHandler&) = delete;
+
+    IoFacadeIoHandler(IoFacadeIoHandler&& io) noexcept;
+    IoFacadeIoHandler& operator=(IoFacadeIoHandler&& io) noexcept;
+
+  private:
+
+    explicit IoFacadeIoHandler(std::uint16_t port_number = DEFAULT_TCP_PORT,
                        std::size_t default_buffer_size = Http::DEFAULT_BUFFER_SIZE) :
       m_port_number(port_number),
       m_buffer_size(default_buffer_size),
@@ -33,10 +46,10 @@ namespace StreamBits::Net {
 
     }
 
+    void Release() noexcept;
 
-    void RunSocket();
-
-  private:
+    std::expected<void, Socket::Error> OpenSocket();
+    std::expected<void, Socket::Error> ConfigureSocket();
 
     std::uint16_t m_port_number;
     std::size_t m_buffer_size;
